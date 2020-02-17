@@ -56,11 +56,7 @@ dd if=bin/kernel of=bin/ucore.img seek=1 conv=notrunc
 
 ### 2. 一个被系统认为是符合规范的硬盘主引导扇区的特征是什么？
 
-第511和第512个字节的内容为`0x55`和`0xaa`
-
-
-
-
+> 第511和第512个字节的内容为`0x55`和`0xaa`
 
 
 
@@ -70,57 +66,142 @@ dd if=bin/kernel of=bin/ucore.img seek=1 conv=notrunc
 
 ## 练习3：分析bootloader进入保护模式的过程。
 
-- 为何开启A20，如何开启A20？
+### 1. 为何开启A20，如何开启A20？
 
-  >进入保护模式以后，我们的地址线有32条，因此不需要实模式下的地址回绕，即第20根及以后的地址线都可用。因此需要打开A20地址线开关。
-  >
-  >开启A20地址线要用到i8042这个键盘控制器芯片。seta20.1是向0x64端口写入命令0xd1，意思是向8042的P2端口写数据。seta20.2是向0x60端口写数据0xdf，将8042的P2端口设置为1。两段代码都要先读0x64端口的第2位，保证input buffer空闲。
+>进入保护模式以后，我们的地址线有32条，因此不需要实模式下的地址回绕，即第20根及以后的地址线都可用。因此需要打开A20地址线开关。
+>
+>开启A20地址线要用到i8042这个键盘控制器芯片。seta20.1是向0x64端口写入命令0xd1，意思是向8042的P2端口写数据。seta20.2是向0x60端口写数据0xdf，将8042的P2端口设置为1。两段代码都要先读0x64端口的第2位，保证input buffer空闲。
 
-- 如何初始化GDT表
+### 2. 如何初始化GDT表
 
-  >用lgdt指令把GDT的加载地址和大小放在GDTR寄存器中。一共48位。低16位是大小，高32位是GDT的起始地址。目前GDT大小为0x17+1一共24字节。每个段描述符8字节，因此现在有3个表项。第0个表项不可用，因此置0。第1个表项为代码段的描述符，第2个表项为数据段的描述符。
-  >
-  >```asm
-  >//bootasm.S
-  ># Bootstrap GDT
-  >.p2align 2                                          # force 4 byte alignment
-  >gdt:
-  >    SEG_NULLASM                                     # null seg
-  >    SEG_ASM(STA_X|STA_R, 0x0, 0xffffffff)           # code seg for bootloader and kernel
-  >    SEG_ASM(STA_W, 0x0, 0xffffffff)                 # data seg for bootloader and kernel
-  >
-  >gdtdesc:
-  >    .word 0x17                                      # sizeof(gdt) - 1
-  >    .long gdt                                       # address gdt
-  >    
-  >//asm.h
-  >/* Normal segment */
-  >#define SEG_NULLASM                                             \
-  >    .word 0, 0;                                                 \
-  >    .byte 0, 0, 0, 0
-  >
-  >#define SEG_ASM(type,base,lim)                                  \
-  >    .word (((lim) >> 12) & 0xffff), ((base) & 0xffff);          \
-  >    .byte (((base) >> 16) & 0xff), (0x90 | (type)),             \
-  >        (0xC0 | (((lim) >> 28) & 0xf)), (((base) >> 24) & 0xff)
-  >
-  >```
-  >
-  >![Screenshot from 2020-02-14 20-39-38](/home/forty2/Pictures/Screenshot from 2020-02-14 20-39-38.png)
+>用lgdt指令把GDT的加载地址和大小放在GDTR寄存器中。一共48位。低16位是大小，高32位是GDT的起始地址。目前GDT大小为0x17+1一共24字节。每个段描述符8字节，因此现在有3个表项。第0个表项不可用，因此置0。第1个表项为代码段的描述符，第2个表项为数据段的描述符。
+>
+>```asm
+>//bootasm.S
+># Bootstrap GDT
+>.p2align 2                                          # force 4 byte alignment
+>gdt:
+>    SEG_NULLASM                                     # null seg
+>    SEG_ASM(STA_X|STA_R, 0x0, 0xffffffff)           # code seg for bootloader and kernel
+>    SEG_ASM(STA_W, 0x0, 0xffffffff)                 # data seg for bootloader and kernel
+>
+>gdtdesc:
+>    .word 0x17                                      # sizeof(gdt) - 1
+>    .long gdt                                       # address gdt
+>    
+>//asm.h
+>/* Normal segment */
+>#define SEG_NULLASM                                             \
+>    .word 0, 0;                                                 \
+>    .byte 0, 0, 0, 0
+>
+>#define SEG_ASM(type,base,lim)                                  \
+>    .word (((lim) >> 12) & 0xffff), ((base) & 0xffff);          \
+>    .byte (((base) >> 16) & 0xff), (0x90 | (type)),             \
+>        (0xC0 | (((lim) >> 28) & 0xf)), (((base) >> 24) & 0xff)
+>
+>```
+>
+>![Screenshot from 2020-02-14 20-39-38](/home/forty2/Pictures/Screenshot from 2020-02-14 20-39-38.png)
 
-- 如何使能和进入保护模式？
+### 3. 如何使能和进入保护模式？
 
-   >将%cr0的第0位置1即可进入保护模式
-   >
-   >```asm
-   >    movl %cr0, %eax
-   >    orl $CR0_PE_ON, %eax
-   >    movl %eax, %cr0
-   >```
+>将%cr0的第0位置1即可进入保护模式
+>
+>```asm
+>    movl %cr0, %eax
+>    orl $CR0_PE_ON, %eax
+>    movl %eax, %cr0
+>```
 
 ## 练习4：分析bootloader加载ELF格式的OS的过程。
 
-- bootloader如何读取硬盘扇区的？
+### 1. bootloader如何读取硬盘扇区的？
+
+>```asm
+>/* readsect - read a single sector at @secno into @dst */
+>static void
+>readsect(void *dst, uint32_t secno) {
+>    // wait for disk to be ready
+>    //等磁盘空闲，即读0x1F7端口寄存器的第6位第7位分别为1,0时才可对磁盘进行操作
+>    waitdisk();
+>	
+>//写入要读的磁盘扇区数，LBA的28位地址，设置device寄存器的后4位，向0x1F7写入读扇区命令
+>    outb(0x1F2, 1);                         // count = 1
+>    outb(0x1F3, secno & 0xFF);
+>    outb(0x1F4, (secno >> 8) & 0xFF);
+>    outb(0x1F5, (secno >> 16) & 0xFF);
+>    outb(0x1F6, ((secno >> 24) & 0xF) | 0xE0);
+>    outb(0x1F7, 0x20);                      // cmd 0x20 - read sectors
+>
+>    // wait for disk to be ready
+>    waitdisk();
+>	
+>    //把0x1F0端口寄存器中的数据读出来
+>    insl(0x1F0, dst, SECTSIZE / 4);
+>}
+>```
+>
+>关于硬盘的读写操作参考《操作系统真象还原》Ch3.5
+
+### 2. bootloader是如何加载ELF格式的OS？
+
+>先判断ELF文件头的前4个字节是否是固定魔数“0x7fELF"。如果不是，则表示这不是一个有效ELF文件。如果是，则定位到程序头表位置处，并读出程序头表中有几个表项。然后把它们加载到内存中的相应位置，最后跳转到内核的entry处开始执行内核代码。
+
+
+
+
+
+## 练习5：实现函数调用堆栈跟踪函数 		
+
+>```c
+>    uint32_t ebp = read_ebp(), eip = read_eip();
+>    int i, j;
+>    for (i = 0; ebp != 0 && i < STACKFRAME_DEPTH; i ++) {
+>        cprintf("ebp:0x%08x eip:0x%08x args:", ebp, eip);
+>        uint32_t *args = (uint32_t *)ebp + 2;
+>        for (j = 0; j < 4; j ++) {
+>            cprintf("0x%08x ", args[j]);
+>        }
+>        cprintf("\n");
+>        print_debuginfo(eip-1); //其实这一句不是很明白
+>        eip = ((uint32_t *)ebp)[1];
+>        ebp = ((uint32_t *)ebp)[0];
+>    }
+>```
+>
+>![image-20200217203905884](/home/forty2/.config/Typora/typora-user-images/image-20200217203905884.png)
+>
+>函数调用栈是这样的，先压入参数，再压入返回地址（即调用结束后下一条指令的地址），再压入ebp，然后把esp的值赋给ebp，再进行局部变量的压栈。
+>
+>执行`make  qemu`命令后截图如下：
+>
+>![image-20200217204321307](/home/forty2/.config/Typora/typora-user-images/image-20200217204321307.png)
+>
+>gdb在*0x7c00和bootmain函数入口处打断点得到的调试截图，可以发现，0x00007d72这个地址即为call函数的地址。而上面图里0x00007d74就是调用函数的下一条指令地址，不过我们已经要跳到kern_init函数里了，因为这里调用函数不会返回，所以其实0x00007d74这个地方的指令永远不会执行了。一般来说，args存放的4个dword是对应4个输入参数的值。但这里比较特殊，由于bootmain函数调用kern_init并没传递任何输入参数，并且栈顶的位置恰好在boot loader第一条指令存放的地址的上面，而args恰好是kern_int的ebp寄存器指向的栈顶往上第2~5个单元，因此args存放的就是boot loader指令的前16个字节。
+>
+>```asm
+>    # Set up the stack pointer and call into C. The stack region is from 0--			# start(0x7c00)
+>    //在bootasm.S文件中设置了%esp和%ebp的初始值
+>    movl $0x0, %ebp
+>    movl $start, %esp
+>    call bootmain
+>    //由于call函数使得%ebp改变为0x7bf8
+>```
+>
+>
+>
+>![image-20200217213500554](/home/forty2/.config/Typora/typora-user-images/image-20200217213500554.png)
+>
+>
+>
+>
+>
+>![image-20200217212049644](/home/forty2/.config/Typora/typora-user-images/image-20200217212049644.png)
+>
+>
+
+
 
 
 
