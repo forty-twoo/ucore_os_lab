@@ -102,7 +102,7 @@ dd if=bin/kernel of=bin/ucore.img seek=1 conv=notrunc
 >
 >```
 >
->![Screenshot from 2020-02-14 20-39-38](/home/forty2/Pictures/Screenshot from 2020-02-14 20-39-38.png)
+>![1](https://github.com/forty-twoo/ucore_os_lab/blob/master/forty-twoo_answer/image/1.png)
 
 ### 3. 如何使能和进入保护模式？
 
@@ -170,13 +170,13 @@ dd if=bin/kernel of=bin/ucore.img seek=1 conv=notrunc
 >    }
 >```
 >
->![image-20200217203905884](/home/forty2/.config/Typora/typora-user-images/image-20200217203905884.png)
+>![2](https://github.com/forty-twoo/ucore_os_lab/blob/master/forty-twoo_answer/image/2.png)
 >
 >函数调用栈是这样的，先压入参数，再压入返回地址（即调用结束后下一条指令的地址），再压入ebp，然后把esp的值赋给ebp，再进行局部变量的压栈。
 >
 >执行`make  qemu`命令后截图如下：
 >
->![image-20200217204321307](/home/forty2/.config/Typora/typora-user-images/image-20200217204321307.png)
+>![3](https://github.com/forty-twoo/ucore_os_lab/blob/master/forty-twoo_answer/image/3.png)
 >
 >gdb在*0x7c00和bootmain函数入口处打断点得到的调试截图，可以发现，0x00007d72这个地址即为call函数的地址。而上面图里0x00007d74就是调用函数的下一条指令地址，不过我们已经要跳到kern_init函数里了，因为这里调用函数不会返回，所以其实0x00007d74这个地方的指令永远不会执行了。一般来说，args存放的4个dword是对应4个输入参数的值。但这里比较特殊，由于bootmain函数调用kern_init并没传递任何输入参数，并且栈顶的位置恰好在boot loader第一条指令存放的地址的上面，而args恰好是kern_int的ebp寄存器指向的栈顶往上第2~5个单元，因此args存放的就是boot loader指令的前16个字节。
 >
@@ -191,13 +191,11 @@ dd if=bin/kernel of=bin/ucore.img seek=1 conv=notrunc
 >
 >
 >
->![image-20200217213500554](/home/forty2/.config/Typora/typora-user-images/image-20200217213500554.png)
+>![4](https://github.com/forty-twoo/ucore_os_lab/blob/master/forty-twoo_answer/image/4.png)
+>
+>![4](https://github.com/forty-twoo/ucore_os_lab/blob/master/forty-twoo_answer/image/5.png)
 >
 >
->
->
->
->![image-20200217212049644](/home/forty2/.config/Typora/typora-user-images/image-20200217212049644.png)
 >
 >
 
